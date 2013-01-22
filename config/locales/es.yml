@@ -3,7 +3,7 @@ es:
   # Views
   ############
   
-  # devise
+  # Devise
   devise:
     registrations:
       new:
@@ -22,12 +22,21 @@ es:
         signup_label: 'Registrarse'
         forgoutpassword_label: '¿Perdiste tu contraseña?'
   
-  # home
+  # Application
   layouts:
     application:
       home_link: 'Inicio'
+      public_chat_link: 'Chat público'
       profile_link: 'Perfil'
       logout_link: 'Cerrar sesión'
+  
+  # Chats    
+  chats:
+    public:
+      chat_public_title: '¡Bienvenido al chat público!'
+      chat_public_list_title: 'Usuarios en línea'
+      send_text: 'Enviar'
+  
   
   #############
   # Default

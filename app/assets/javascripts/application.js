@@ -14,3 +14,4 @@
 //= require jquery_ujs
 //= require bootstrap
 //= require_tree .
+//= require jquery.scrollTo-1.4.3.1-min.js

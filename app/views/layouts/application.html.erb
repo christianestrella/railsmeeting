@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>Rbchat</title>
+		<title>Rails Meeting</title>
 		<%= stylesheet_link_tag    "application", :media => "all" %>
 		<%= javascript_include_tag "application" %>
 		<%= csrf_meta_tags %>
@@ -50,16 +50,19 @@
 			<div class="masthead">
 				<ul class="nav nav-pills pull-right">
 					<li class="active">
-						<%= link_to t('.home_link'), @index %>
+						<%= link_to t('.home_link'), :controller => 'home', :action => 'index' %>
 					</li>
 					<li>
-						<%= link_to t('.profile_link'), @index2 %>
+						<%= link_to t('.public_chat_link'), :controller => 'chats', :action => 'public'  %>
+					</li>
+					<li>
+						<%= link_to t('.profile_link'), @index %>
 					</li>
 					<li>
 						<%= link_to t('.logout_link'), destroy_user_session_path, :method => :delete %>
 					</li>
 				</ul>
-				<h3 class="muted">RBChat</h3>
+				<h3 class="muted">Rails Meeting</h3>
 			</div>
 			<%= yield %>
 			<hr>
