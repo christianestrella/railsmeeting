@@ -48,6 +48,13 @@
 		<%= f.label :password_confirmation %>
 		<%= f.password_field :password_confirmation %>
 	</div>
+	
+	<% f.fields_for :company do |builder| %>
+		<div>
+			<%= builder.label :name %>
+			<%= builder.text_field :name %>
+		</div>
+	<% end %>
 
 	<div>
 		<%= f.submit t('.signup_button'), :class => 'btn btn-primary' %>

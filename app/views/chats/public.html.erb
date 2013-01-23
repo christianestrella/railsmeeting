@@ -31,12 +31,15 @@ $(function() {
 	// Inicializamos el cliente
 	var client = new Faye.Client('http://192.168.100.46:9292/faye');
 	
+	// Suscribimos el cliente
 	client.subscribe('/chats/public', function(data) {
 	  $('#chat_messages').append('<li>' + data.usr + ": " + data.msg + '</li>');
 	});
 	
+	// Scroll por default
 	var scroll_counter = 400;
 	
+	// Ennviamos un mensaje en el submit
 	$('#new_message_form').submit(function() {
 		client.publish('/chats/public', { usr: '<%= current_user.email %>', msg: $('#message').val() });
 		$('#message').val('');

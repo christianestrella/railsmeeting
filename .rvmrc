@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# set app id
+app_id="ruby-1.9.3-p374@railsmeeting"
+
+# set rvm source
+source "${rvm_path:-$HOME/.rvm}/scripts/rvm"
+
+# verify if gemset exits
+if [[ -d "${rvm_path:-$HOME/.rvm}/environments" && -s "${rvm_path:-$HOME/.rvm}/environments/$app_id" ]]
+then
+	# use gemset
+	rvm use "$app_id"
+else
+	# create gemset environment and run bundle install
+	rvm --create use "$app_id"
+	bundle install
+fi

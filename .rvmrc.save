@@ -1,0 +1,7 @@
+#!/bin/bash
+
+app_id = "1.9.3-p374@railsmeeting"
+
+if [![ -d '${rvm_path:-$HOME/.rvm}/environments'] && ![ -s '${rvm_path:-$HOME/.rvm}/environments/$environment_id']] then
+
+
