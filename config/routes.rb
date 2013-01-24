@@ -1,7 +1,7 @@
 Railsmeeting::Application.routes.draw do
   get "chats/public"
 
-  devise_for :users, :path_names => { :sign_in => 'login', :sign_up => 'register' }
+  devise_for :users, :controllers => { :registrations => "registrations" }, :path_names => { :sign_in => 'login', :sign_up => 'register' }
   
   root :to => "home#index"
 

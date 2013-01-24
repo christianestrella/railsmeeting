@@ -49,10 +49,10 @@
 		<%= f.password_field :password_confirmation %>
 	</div>
 	
-	<% f.fields_for :company do |builder| %>
+	<% f.fields_for :company do |build| %>
 		<div>
-			<%= builder.label :name %>
-			<%= builder.text_field :name %>
+			<%= build.label :name %>
+			<%= build.text_field :name %>
 		</div>
 	<% end %>
 
