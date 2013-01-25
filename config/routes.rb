@@ -1,9 +1,15 @@
 Railsmeeting::Application.routes.draw do
-  get "chats/public"
-
-  devise_for :users, :controllers => { :registrations => "registrations" }, :path_names => { :sign_in => 'login', :sign_up => 'register' }
+  devise_for :users,
+    :path_names => { :sign_in => 'login', :sign_up => 'register' }
   
   root :to => "home#index"
+  
+  resources :autocompletes do
+    get 'search_company_by_name', :on => :collection
+  end
+  
+  get "chats/public"
+  get "autocompletes/search_company_by_name"
 
   # The priority is based upon order of creation:
   # first created -> highest priority.

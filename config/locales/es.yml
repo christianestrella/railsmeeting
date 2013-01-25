@@ -7,8 +7,11 @@ es:
   devise:
     registrations:
       new:
-        signup_title: 'Registro'
+        signup_title: 'Registro de usuario'
         signup_button: 'Registrarme'
+        password_label: 'Contraseña'
+        password_confirmation_label: 'Confirmación de contraseña'
+        company_label: 'Nombre de tu empresa'
     sessions:
       new:
         signin_title: 'Porfavor, identifíquese'
