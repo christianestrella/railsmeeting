@@ -1,5 +1,5 @@
 class Company < ActiveRecord::Base
-  belongs_to :user
+  has_many :user
   
   attr_accessible :description, :name
 end
