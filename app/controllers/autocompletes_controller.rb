@@ -1,3 +1,7 @@
+# Captiva Tecnología Digital
+# by: Christian Estrella
+# date: January 2013
+
 class AutocompletesController < ApplicationController
   before_filter :authenticate_user!, :except => [ :search_company_by_name ]
    

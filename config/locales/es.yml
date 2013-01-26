@@ -240,5 +240,14 @@ es:
     errors:
       <<: *errors
   activerecord:
+    attributes:
+      user:
+        email: 'Email: '
+        password: 'Contraseña: '
+      company:
+        name: 'Compañia: '
     errors:
       <<: *errors
+      models:
+        company:
+          attributes:

@@ -1,3 +1,7 @@
+# Captiva Tecnología Digital
+# by: Christian Estrella
+# date: January 2013
+
 class ApplicationController < ActionController::Base
   protect_from_forgery
  

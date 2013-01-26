@@ -114,6 +114,7 @@ GEM
     rake (10.0.3)
     rdoc (3.12)
       json (~> 1.4)
+    redis (3.0.2)
     ref (1.0.2)
     rolify (3.2.0)
     sass (3.2.5)
@@ -161,6 +162,7 @@ DEPENDENCIES
   json
   quiet_assets
   rails (= 3.2.11)
+  redis (~> 3.0.2)
   rolify
   sass-rails (~> 3.2.3)
   sqlite3

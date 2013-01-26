@@ -62,3 +62,6 @@ gem 'json'
 
 # Event machine
 gem 'eventmachine'
+
+# Redis
+gem 'redis', '~> 3.0.2'

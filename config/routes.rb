@@ -1,5 +1,6 @@
 Railsmeeting::Application.routes.draw do
   devise_for :users,
+    :controllers => { :sessions => 'sessions' },
     :path_names => { :sign_in => 'login', :sign_up => 'register' }
   
   root :to => "home#index"
