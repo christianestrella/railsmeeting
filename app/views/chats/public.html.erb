@@ -7,13 +7,15 @@
 		</p>
 		
 		<ul id="chat_messages" style="height:400px; max-height:400px; overflow:auto">
-			<span id="chat_bottom"></span>
 		</ul>
 	</div>
 	<div class="span3">
 		<p class="alert alert-info">
 			<%= t('.chat_public_list_title')%>
 		</p>
+		
+		<ul id="chat_users" style="height:400px; max-height:400px; overflow:auto">
+		</ul>
 	</div>
 </div>
 
@@ -30,10 +32,57 @@
 $(function() {
 	// Inicializamos el cliente
 	var client = new Faye.Client('http://192.168.100.46:9292/faye');
+	var channel = '/chats/public/<%= Digest::MD5.hexdigest(current_user.company_id.to_s) %>'
+	
+	var addOnlyNonUserExists = function(data) {
+		if ((data != null) && (data.members != null)) {
+			for (var i = 0; i < data.members.length; i++) {
+				if ($('#' + data.members[i].user.id).length == 0) {
+					$('#chat_users').append('<li id=' + data.members[i].user.id + '><label class="label" style="font-size: 11px">' + data.members[i].user.email + '</label></li>');
+				}
+			}
+		}
+	}
+	
+	client.addExtension({
+		outgoing: function(message, callback) {
+			if (message.channel === '/meta/subscribe' || message.channel === '/meta/disconnect') {
+				// Establecer el id de la compañia
+				message.company_id = message.company_id || {};
+				message.company_id = '<%= current_user.company_id %>';
+				// Establecer el id del usuario
+				message.user_id = message.user_id || {};
+				message.user_id = '<%= current_user.id %>';
+				// Establecer el correo del usuario
+				message.user_email = message.email || {};
+				message.user_email = '<%= current_user.email %>';
+			}
+			
+			callback(message);
+		}
+	});
 	
 	// Suscribimos el cliente
-	client.subscribe('/chats/public', function(data) {
-	  $('#chat_messages').append('<li>' + data.usr + ": " + data.msg + '</li>');
+	client.subscribe(channel, function(data) {
+		if (data.type != null) {
+			switch (data.type) {
+				case 'attached':
+					$('#chat_messages').append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-success">' + data.msg + '</label></li>');
+					addOnlyNonUserExists(data);
+					break;
+				case 'exists':
+					addOnlyNonUserExists(data);
+					break;
+				case 'abandon':
+					$('#chat_messages').append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-warning">' + data.msg + '</label></li>');
+					$('#' + data.usr_id).remove();
+					break;
+			}
+		}
+		
+		if (data.usr != null && data.msg != null) {
+			$('#chat_messages').append('<li>' + data.usr + ": " + data.msg + '</li>');
+		}
 	});
 	
 	// Scroll por default
@@ -41,7 +90,7 @@ $(function() {
 	
 	// Ennviamos un mensaje en el submit
 	$('#new_message_form').submit(function() {
-		client.publish('/chats/public', { usr: '<%= current_user.email %>', msg: $('#message').val() });
+		client.publish(channel, { usr: '<%= current_user.email %>', msg: $('#message').val() });
 		$('#message').val('');
 		
 		scroll_counter += 50;
