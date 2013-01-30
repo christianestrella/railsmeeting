@@ -37,7 +37,7 @@ class SubscribeUser
     end
     
     # Obtener el id del usuario y compañia
-    company_id = Digest::MD5.hexdigest(message['company_id'])
+    company_id = message['company_id']
     user_id = message['user_id']
     user_email = message['user_email']
     
@@ -53,7 +53,7 @@ class SubscribeUser
         
         faye_client.publish(subscription, { 'type' => 'attached', 'usr_id' => user_id, 'usr_email' => user_email, 'msg' => "Se ha conectado el usuario: #{user_email}.", 'members' => members_mapped })
         
-        p "~> Se agrego el usuario '#{user_email}' a la compañia compañia '#{company_id}'."
+        p "~> Se agrego el usuario '#{user_email}' a la compañia '#{company_id}'."
       else
         p "~> El usuario '#{user_email}' ya existe en la compañia '#{company_id}'."
         faye_client.publish(subscription, { 'type' => 'exists', 'usr_id' => user_id, 'usr_email' => user_email, 'members' => members_mapped })
@@ -96,7 +96,7 @@ class DisconnectUser
     end
     
     # Obtener el id del usuario y compañia
-    company_id = Digest::MD5.hexdigest(message['company_id'])
+    company_id = message['company_id']
     user_id = message['user_id']
     user_email = message['user_email']
     

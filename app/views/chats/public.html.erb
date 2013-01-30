@@ -6,8 +6,12 @@
 			<%= t('.chat_public_title')%>
 		</p>
 		
-		<ul id="chat_messages" style="height:400px; max-height:400px; overflow:auto">
-		</ul>
+		<div id="chat_contents" class="tab-content">
+  			<div class="tab-pane fade active in" id="public">
+  				<ul id="chat_messages" style="height:400px; max-height:400px; overflow:auto">
+				</ul>
+  			</div>
+		</div>
 	</div>
 	<div class="span3">
 		<p class="alert alert-info">
@@ -21,6 +25,11 @@
 
 <div class="container">
 	<div class="span9">
+		<ul class="nav nav-tabs" id="chat_tabs">
+		  <li><a href="#public" class="active" data-toggle="tab">Public</a></li>
+		</ul>
+	</div>
+	<div class="span9">
 		<form id="new_message_form" class="form-inline well">
 			<input type="text" id="message" name="message" class="input-xxlarge">
 			<input type="submit" value="<%= t('.send_text') %>" class="btn btn-primary">
@@ -30,29 +39,69 @@
 
 <script type="text/javascript">
 $(function() {
-	// Inicializamos el cliente
-	var client = new Faye.Client('http://192.168.100.46:9292/faye');
-	var channel = '/chats/public/<%= Digest::MD5.hexdigest(current_user.company_id.to_s) %>'
-	
-	var addOnlyNonUserExists = function(data) {
-		if ((data != null) && (data.members != null)) {
-			for (var i = 0; i < data.members.length; i++) {
-				if ($('#' + data.members[i].user.id).length == 0) {
-					$('#chat_users').append('<li id=' + data.members[i].user.id + '><label class="label" style="font-size: 11px">' + data.members[i].user.email + '</label></li>');
+	var Client = {
+		// Inicializamos el cliente.
+		server: new Faye.Client('http://192.168.100.46:9292/faye'),
+		// Scroll por default
+		scroll_counter: 400,
+		
+		// Método que agrega a la lista a los usuarios menos a sí mismo.
+		addOnlyNonUserExists: function(data) {
+			if ((data != null) && (data.members != null)) {
+				for (var i = 0; i < data.members.length; i++) {
+					if ($('#' + data.members[i].user.id).length == 0) {
+						$('#chat_users').append('<li id=' + data.members[i].user.id + '><a data-useremail="' + data.members[i].user.email + '" data-userid="' + data.members[i].user.id + '" class="label" style="font-size: 11px">' + data.members[i].user.email + '</label></li>');
+					}
 				}
 			}
+		},
+		
+		subscribe: function(channel, panelId, isPrivate) {
+			// Suscribimos el cliente
+			this.server.subscribe('/chats/public/' + channel, function(data) {
+				if (data.type != null) {
+					switch (data.type) {
+						case 'attached':
+							$(panelId).append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-success">' + data.msg + '</label></li>');
+							if (!isPrivate)
+								Client.addOnlyNonUserExists(data);
+							break;
+						case 'exists':
+							if (!isPrivate)
+								Client.addOnlyNonUserExists(data);
+							break;
+						case 'abandon':
+							$(panelId).append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-warning">' + data.msg + '</label></li>');
+							
+							if (!isPrivate)
+								$('#' + data.usr_id).remove();
+							break;
+					}
+				}
+				
+				if (data.usr != null && data.msg != null) {
+					$(panelId).append('<li>' + data.usr + ": " + data.msg + '</li>');
+				}
+			});
+		},
+		
+		publish: function(channel, message, panelId) {
+			this.server.publish('/chats/public/' + channel, { usr: '<%= current_user.email %>', msg: message });
 		}
-	}
+	};
 	
-	client.addExtension({
+	// Se agrega la extensión
+	Client.server.addExtension({
 		outgoing: function(message, callback) {
 			if (message.channel === '/meta/subscribe' || message.channel === '/meta/disconnect') {
 				// Establecer el id de la compañia
 				message.company_id = message.company_id || {};
-				message.company_id = '<%= current_user.company_id %>';
+				message.company_id = '<%= Digest::MD5.hexdigest current_user.company_id.to_s %>';
+				
 				// Establecer el id del usuario
 				message.user_id = message.user_id || {};
-				message.user_id = '<%= current_user.id %>';
+				message.user_id = '<%= current_user.id.to_s %>';
+				
 				// Establecer el correo del usuario
 				message.user_email = message.email || {};
 				message.user_email = '<%= current_user.email %>';
@@ -62,41 +111,47 @@ $(function() {
 		}
 	});
 	
-	// Suscribimos el cliente
-	client.subscribe(channel, function(data) {
-		if (data.type != null) {
-			switch (data.type) {
-				case 'attached':
-					$('#chat_messages').append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-success">' + data.msg + '</label></li>');
-					addOnlyNonUserExists(data);
-					break;
-				case 'exists':
-					addOnlyNonUserExists(data);
-					break;
-				case 'abandon':
-					$('#chat_messages').append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-warning">' + data.msg + '</label></li>');
-					$('#' + data.usr_id).remove();
-					break;
-			}
-		}
-		
-		if (data.usr != null && data.msg != null) {
-			$('#chat_messages').append('<li>' + data.usr + ": " + data.msg + '</li>');
-		}
-	});
-	
-	// Scroll por default
+	var channel = '<%= Digest::MD5.hexdigest current_user.company_id.to_s %>';
 	var scroll_counter = 400;
 	
-	// Ennviamos un mensaje en el submit
+	// Se hace el subscribe al canal público
+	Client.subscribe(channel, '#chat_messages', false);
+	
 	$('#new_message_form').submit(function() {
-		client.publish(channel, { usr: '<%= current_user.email %>', msg: $('#message').val() });
-		$('#message').val('');
+		var message = $('#message').val();
+		
+		Client.publish(channel, message, '#chat_messages');
 		
 		scroll_counter += 50;
+		
 		$('#chat_messages').animate({scrollTop: scroll_counter}, 50);
+		$('#message').val('');
 		
 		return false;
 	});
+	
+	// Se realiza el bind de los eventos
+	$('#chat_users').on('click', 'a', function(event) {
+		// Obtenemos el id
+		var email = $(this).data('useremail');
+		var id = $(this).data('userid');
+		
+		if (id != null) {
+			$('#chat_tabs').append('<li id="tab_with_' + id + '"><a href="#chat_with_' + id + '" data-toggle="tab">' + email + '&nbsp;&nbsp;<button data-userid="' + id + '" class="close">&times;</button></a></li>');
+			$('#chat_contents').append('<div id="chat_with_' + id + '" class="tab-pane fade"><ul id="chat_messages_' + id +'" style="height:400px; max-height:400px; overflow:auto"></ul></div>')
+			
+			Client.subscribe(id);
+		}
+	});
+	
+	$('#chat_tabs').on('click', 'button', function(event) {
+		var id = $(this).data('userid');
+		
+		$('#tab_with_' + id).remove();
+		$('#chat_with_' + id).remove();
+	});
+	
+	$('#chat_tabs a[href="#public"]').tab('show');
+	
 });
 </script>
