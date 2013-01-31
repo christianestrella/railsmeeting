@@ -50,7 +50,7 @@ $(function() {
 			if ((data != null) && (data.members != null)) {
 				for (var i = 0; i < data.members.length; i++) {
 					if ($('#' + data.members[i].user.id).length == 0) {
-						$('#chat_users').append('<li id=' + data.members[i].user.id + '><a data-useremail="' + data.members[i].user.email + '" data-userid="' + data.members[i].user.id + '" class="label" style="font-size: 11px">' + data.members[i].user.email + '</label></li>');
+						$('#chat_users').append('<li id=' + data.members[i].user.id + '><a data-useremail="' + data.members[i].user.email + '" data-userchannel="' + data.members[i].user.channel + '" data-userid="' + data.members[i].user.id + '" class="label" style="font-size: 11px">' + data.members[i].user.email + '</label></li>');
 					}
 				}
 			}
@@ -76,6 +76,36 @@ $(function() {
 							if (!isPrivate)
 								$('#' + data.usr_id).remove();
 							break;
+						case 'private':
+							if (data.private_usr_id == <%= current_user.id.to_s %>) {
+								var channel_id = data.channel_id;
+								var private_usr_id = data.private_usr_id;
+								var user_id = data.usr_id;
+								var user_email = data.usr_email;
+								var exit = false;
+								
+								// Verifica que no agregue a un usuario ya existente en privado
+								$('#chat_tabs li').each(function(index) {
+									var private_userid = $(this).data('userid');
+									
+									if (private_userid === user_id) {
+										exit = true;
+										return;
+									}
+								});
+								
+								if (exit)
+									return;
+								
+								if (user_id != null) {
+									$('#chat_tabs').append('<li id="tab_with_' + user_id + '" data-userid="' + user_id + '" data-channelid="' + channel_id + '" data-panelid="chat_with_' + user_id + '"><a href="#chat_with_' + user_id + '" data-toggle="tab">' + user_email + '&nbsp;&nbsp;<button data-userid="' + user_id + '" class="close">&times;</button></a></li>');
+									$('#chat_contents').append('<div id="chat_with_' + user_id + '" class="tab-pane fade"><ul id="chat_messages_' + user_id +'" style="height:400px; max-height:400px; overflow:auto"></ul></div>')
+									
+									Client.subscribePrivate(channel_id, user_id, '#chat_with_' + user_id, false);
+								}
+							}
+								
+							break;
 					}
 				}
 				
@@ -85,8 +115,70 @@ $(function() {
 			});
 		},
 		
+		subscribePrivate: function(channel, memberId, panelId, notify) {
+			// Se agrega la extensión
+			this.server.addExtension({
+				outgoing: function(message, callback) {
+					if (message.channel === '/meta/subscribe' || message.channel === '/meta/disconnect') {
+						// Establecer el id del usuario
+						message.user_id = message.user_id || {};
+						message.user_id = '<%= current_user.id.to_s %>';
+						
+						// Establecer el correo del usuario
+						message.user_email = message.email || {};
+						message.user_email = '<%= current_user.email %>';
+						
+						// Establecer el id del chat privado
+						message.private_channel_id = message.private_channel_id || {};
+						message.private_channel_id = channel;
+						
+						// Establecer el id del usuario con el que se iniciará chat privado
+						message.private_user_id = message.private_user_id || {};
+						message.private_user_id = memberId;
+						
+						// Establecer si se le envia notificación
+						message.notify = message.notify || {};
+						message.notify = notify;
+					}
+					
+					callback(message);
+				}
+			});
+			
+			this.server.subscribe('/chats/private/' + channel, function(data) {
+				if (data.type != null) {
+					switch (data.type) {
+						case 'attached':
+							$(panelId + ' ul').append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-success">' + data.msg + '</label></li>');
+							
+							/*if (!isPrivate)
+								Client.addOnlyNonUserExists(data);*/
+							break;
+						case 'exists':
+							/*if (!isPrivate)
+								Client.addOnlyNonUserExists(data);*/
+							break;
+						case 'abandon':
+							$(panelId + ' ul').append('<li style="font-color: gray; font-style: italic; font-size: 11px"><label class="label label-warning">' + data.msg + '</label></li>');
+							
+							/*if (!isPrivate)
+								$('#' + data.usr_id).remove();*/
+							break;
+					}
+				}
+				
+				if (data.usr != null && data.msg != null) {
+					$(panelId + ' ul').append('<li>' + data.usr + ": " + data.msg + '</li>');
+				}
+			});
+		},
+		
 		publish: function(channel, message, panelId) {
 			this.server.publish('/chats/public/' + channel, { usr: '<%= current_user.email %>', msg: message });
+		},
+		
+		privatePublish: function(channel, message, panelId) {
+			this.server.publish('/chats/private/' + channel, { usr: '<%= current_user.email %>', msg: message });
 		}
 	};
 	
@@ -118,13 +210,32 @@ $(function() {
 	Client.subscribe(channel, '#chat_messages', false);
 	
 	$('#new_message_form').submit(function() {
+		var isPrivateChannel = false;
+		var privateChannel = "";
+		var panelPrivateChannel = "";
+		
+		$('#chat_tabs li').each(function(index) {
+			if ($(this).attr('class') == 'active') {
+				privateChannel = $(this).data('channelid');
+				panelPrivateChannel = $(this).data('panelid');
+				
+				if (privateChannel != null)
+					isPrivateChannel = true;
+			}
+		});
+		
 		var message = $('#message').val();
 		
-		Client.publish(channel, message, '#chat_messages');
+		if (!isPrivateChannel) {
+			Client.publish(channel, message, '#chat_messages');
+			$('#chat_messages').animate({scrollTop: scroll_counter}, 50);
+			scroll_counter += 50;
+		} else {
+			Client.privatePublish(privateChannel, message, '#' + panelPrivateChannel, true);
+			$('#' + panelPrivateChannel).animate({scrollTop: scroll_counter}, 50);
+			scroll_counter += 50;
+		}
 		
-		scroll_counter += 50;
-		
-		$('#chat_messages').animate({scrollTop: scroll_counter}, 50);
 		$('#message').val('');
 		
 		return false;
@@ -135,17 +246,37 @@ $(function() {
 		// Obtenemos el id
 		var email = $(this).data('useremail');
 		var id = $(this).data('userid');
+		var channel = $(this).data('userchannel');
+		var exit = false;
+		
+		// Verifica que no se agregue a si mismo
+		if ('<%= current_user.id.to_s %>' == id)
+			return;
+			
+		// Verifica que no agregue a un usuario ya existente en privado
+		$('#chat_tabs li').each(function(index) {
+			var private_userid = $(this).data('userid');
+			
+			if (private_userid === id) {
+				exit = true;
+				return;
+			}
+		});
+		
+		if (exit)
+			return;
 		
 		if (id != null) {
-			$('#chat_tabs').append('<li id="tab_with_' + id + '"><a href="#chat_with_' + id + '" data-toggle="tab">' + email + '&nbsp;&nbsp;<button data-userid="' + id + '" class="close">&times;</button></a></li>');
+			$('#chat_tabs').append('<li id="tab_with_' + id + '" data-userid="' + id + '" data-channelid="' + channel + '" data-panelid="chat_with_' + id + '"><a href="#chat_with_' + id + '" data-toggle="tab">' + email + '&nbsp;&nbsp;<button data-userid="' + id + '" class="close">&times;</button></a></li>');
 			$('#chat_contents').append('<div id="chat_with_' + id + '" class="tab-pane fade"><ul id="chat_messages_' + id +'" style="height:400px; max-height:400px; overflow:auto"></ul></div>')
 			
-			Client.subscribe(id);
+			Client.subscribePrivate(channel, id, '#chat_with_' + id);
 		}
 	});
 	
 	$('#chat_tabs').on('click', 'button', function(event) {
 		var id = $(this).data('userid');
+		var channel = $(this).data('userchannel');
 		
 		$('#tab_with_' + id).remove();
 		$('#chat_with_' + id).remove();
